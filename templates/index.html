@@ -23,7 +23,7 @@
 
 <!-- The rest of our javascript dependencies are bundled and -->
 <!-- 'minified' by 'browserify'  -->
-<script type="text/javascript" 
+<script type="text/javascript"
    src="/static/js/busy.min.js">
 </script>
 
@@ -31,12 +31,12 @@
 
 <body>
 <div class="container">
-
-<h1>Busy times</h1>
-
+<div class="row">
+<h1 class="text-center">MeetMe | <small>busy times</small></h1>
+</div>
 <!--
   -- If there are any warnings or other messages from a prior action,
-  -- they appear above the rest of the content, just until the next 
+  -- they appear above the rest of the content, just until the next
   -- action.
   -->
 
@@ -49,10 +49,12 @@
     </ul>
   {% endif %}
 {% endwith %}
-
+<div class="row">
 <h2>Date range</h2>
-  <form action="/setrange" method="post">
-  <input type="text" name="daterange" size="12"
+</div>
+<div class="row">
+  <form id="enterDate" action="/setrange" method="post">
+  <input id="daterange" type="text" name="daterange" size="12"
     {% if session.daterange is defined %}
          value="{{session.daterange}}"
     {% endif %}
@@ -61,11 +63,11 @@
      border: 1px solid #ccc; width: 12em" >
   <script type="text/javascript">
   $(function() {
-  $('input[name="daterange"]').daterangepicker(
+  $('#daterange').daterangepicker(
     {    ranges: {
            'Today': [moment(), moment()],
            'Tomorrow':[moment().add(1, 'days'),
-                       moment().add(1, 'days')], 
+                       moment().add(1, 'days')],
            'This week':[moment(), moment().endOf('week')],
            'Next week':[moment().add(7, 'days').startOf('week'),
                         moment().add(7, 'days').endOf('week')],
@@ -76,14 +78,14 @@
     });
   </script>
 
-<br /><input type="submit" value="Choose" />
+<br /><input class="btn btn-default" type="submit" value="Choose" />
 </form>
-
+</div>
     <!--
     Show the calendar list (if we have it).  This will need to be turned into
     a form from which calendars can be picked. Up to three entries are
     shown in each row (but the order is across then down; I would
-    prefer down then across). 
+    prefer down then across).
     -->
 {% if session.calendars is defined  %}
   <div class="row">
@@ -97,7 +99,7 @@
   {% endfor %}
   </div>
 {% endif %}
-    
+
 
   </div>  <!-- container (for bootstrap) -->
   </body> </html>
