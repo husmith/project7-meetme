@@ -1,14 +1,26 @@
 /*
- * I wanted to do this: 
+ * I wanted to do this:
  * @import ../js/node_modules/bootstrap/dist/css/bootstrap.min.css;
  * @import ../js/node_modules/bootstrap-daterangepicker/daterangepicker.css;
- * 
- * Works great in my local environment with clean-css, but I haven't figured 
- * out how to install clean-css on ix, so for now I'll explicitly load all the 
- * style sheets in the html. 
+ *
+ * Works great in my local environment with clean-css, but I haven't figured
+ * out how to install clean-css on ix, so for now I'll explicitly load all the
+ * style sheets in the html.
  */
-
-body {
+ body {
+   font-size: 1rem;
+   line-height: 1.4;
+   font-family: "Source Sans Pro", Helvetica, Arial, sans-serif;
+   font-weight: 300;
+   color: #002c3c;
     background-color: "#ccffcc";
 }
+.center_div {
+    margin: 0 auto;
+    width: 80%;
+}
 
+#daterange {
+    margin-bottom: 20px;
+    padding: 10px;
+}
