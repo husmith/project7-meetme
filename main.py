@@ -7,7 +7,7 @@ import uuid
 import json
 import logging
 
-# Date handling 
+# Date handling
 import arrow # Replacement for datetime, based on moment.js
 import datetime # But we still need time
 from dateutil import tz  # For interpreting local times
@@ -17,7 +17,7 @@ from dateutil import tz  # For interpreting local times
 from oauth2client import client
 import httplib2   # used in oauth2 flow
 
-# Google API for services 
+# Google API for services
 from apiclient import discovery
 
 ###
@@ -28,7 +28,7 @@ app = flask.Flask(__name__)
 
 SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
 CLIENT_SECRET_FILE = CONFIG.GOOGLE_LICENSE_KEY  ## You'll need this
-APPLICATION_NAME = 'MeetMe class project'
+APPLICATION_NAME = 'googly'
 
 #############################
 #
@@ -40,26 +40,29 @@ APPLICATION_NAME = 'MeetMe class project'
 @app.route("/index")
 def index():
   app.logger.debug("Entering index")
+  if 'use_gcal' in flask.session and flask.session['use_gcal']:
+    credentials = valid_credentials()
+    if not credentials:
+      return flask.redirect(flask.url_for('oauth2callback'))
   if 'begin_date' not in flask.session:
     init_session_values()
   return render_template('index.html')
 
-@app.route("/choose")
+@app.route("/getcals")
 def choose():
-    ## We'll need authorization to list calendars 
+    ## We'll need authorization to list calendars
     ## I wanted to put what follows into a function, but had
     ## to pull it back here because the redirect has to be a
-    ## 'return' 
+    ## 'return'
     app.logger.debug("Checking credentials for Google calendar access")
     credentials = valid_credentials()
     if not credentials:
       app.logger.debug("Redirecting to authorization")
       return flask.redirect(flask.url_for('oauth2callback'))
-
     gcal_service = get_gcal_service(credentials)
     app.logger.debug("Returned from get_gcal_service")
     flask.session['calendars'] = list_calendars(gcal_service)
-    return render_template('index.html')
+    return flask.render_template('index.html')
 
 ####
 #
@@ -69,7 +72,7 @@ def choose():
 #      redirect to OAuth server first, and may take multiple
 #      trips through the oauth2 callback function.
 #
-#  Protocol for use ON EACH REQUEST: 
+#  Protocol for use ON EACH REQUEST:
 #     First, check for valid credentials
 #     If we don't have valid credentials
 #         Get credentials (jump to the oauth2 protocol)
@@ -82,11 +85,11 @@ def choose():
 #  from the Google services. Service objects are NOT serializable ---
 #  we can't stash one in a cookie.  Instead, on each request we
 #  get a fresh serivce object from our credentials, which are
-#  serializable. 
+#  serializable.
 #
 #  Note that after authorization we always redirect to /choose;
 #  If this is unsatisfactory, we'll need a session variable to use
-#  as a 'continuation' or 'return address' to use instead. 
+#  as a 'continuation' or 'return address' to use instead.
 #
 ####
 
@@ -95,7 +98,7 @@ def valid_credentials():
     Returns OAuth2 credentials if we have valid
     credentials in the session.  This is a 'truthy' value.
     Return None if we don't have credentials, or if they
-    have expired or are otherwise invalid.  This is a 'falsy' value. 
+    have expired or are otherwise invalid.  This is a 'falsy' value.
     """
     if 'credentials' not in flask.session:
       return None
@@ -138,14 +141,14 @@ def oauth2callback():
   flow =  client.flow_from_clientsecrets(
       CLIENT_SECRET_FILE,
       scope= SCOPES,
-      redirect_uri=flask.url_for('oauth2callback', _external=True))
+      redirect_uri='http://localhost:5000/oauth2callback')
   ## Note we are *not* redirecting above.  We are noting *where*
-  ## we will redirect to, which is this function. 
-  
-  ## The *second* time we enter here, it's a callback 
+  ## we will redirect to, which is this function.
+
+  ## The *second* time we enter here, it's a callback
   ## with 'code' set in the URL parameter.  If we don't
   ## see that, it must be the first time through, so we
-  ## need to do step 1. 
+  ## need to do step 1.
   app.logger.debug("Got flow")
   if 'code' not in flask.request.args:
     app.logger.debug("Code not in flask.request.args")
@@ -164,7 +167,9 @@ def oauth2callback():
     ## but for the moment I'll just log it and go back to
     ## the main screen
     app.logger.debug("Got credentials")
-    return flask.redirect(flask.url_for('choose'))
+    flask.flash('Setting option to use Google calendars')
+    flask.session['use_gcal'] = True
+    return flask.redirect('index')
 
 #####
 #
@@ -173,7 +178,7 @@ def oauth2callback():
 #     computation here; use of the information might
 #     depend on what other information we have.
 #   Setting an option sends us back to the main display
-#      page, where we may put the new information to use. 
+#      page, where we may put the new information to use.
 #
 #####
 
@@ -183,29 +188,29 @@ def setrange():
     User chose a date range with the bootstrap daterange
     widget.
     """
-    app.logger.debug("Entering setrange")  
+    app.logger.debug("Entering setrange")
     flask.flash("Setrange gave us '{}'".format(
       request.form.get('daterange')))
     daterange = request.form.get('daterange')
     flask.session['daterange'] = daterange
-    daterange_parts = daterange.split()
+    daterange_parts = daterange.split(' - ')
     flask.session['begin_date'] = interpret_date(daterange_parts[0])
-    flask.session['end_date'] = interpret_date(daterange_parts[2])
+    flask.session['end_date'] = interpret_date(daterange_parts[1])
     app.logger.debug("Setrange parsed {} - {}  dates as {} - {}".format(
-      daterange_parts[0], daterange_parts[1], 
+      daterange_parts[0], daterange_parts[1],
       flask.session['begin_date'], flask.session['end_date']))
-    return flask.redirect(flask.url_for("choose"))
+    return flask.redirect('index')
 
 ####
 #
-#   Initialize session variables 
+#   Initialize session variables
 #
 ####
 
 def init_session_values():
     """
     Start with some reasonable defaults for date and time ranges.
-    Note this must be run in app context ... can't call from main. 
+    Note this must be run in app context ... can't call from main.
     """
     # Default date span = tomorrow to 1 week from now
     now = arrow.now('local')
@@ -229,7 +234,7 @@ def interpret_time( text ):
     """
     app.logger.debug("Decoding time '{}'".format(text))
     time_formats = ["ha", "h:mma",  "h:mm a", "H:mm"]
-    try: 
+    try:
         as_arrow = arrow.get(text, time_formats).replace(tzinfo=tz.tzlocal())
         app.logger.debug("Succeeded interpreting time")
     except:
@@ -264,7 +269,7 @@ def next_day(isotext):
 #  Functions (NOT pages) that return some information
 #
 ####
-  
+
 def list_calendars(service):
     """
     Given a google 'service' object, return a list of
@@ -274,13 +279,13 @@ def list_calendars(service):
     the primary calendar first, and selected (that is, displayed in
     Google Calendars web app) calendars before unselected calendars.
     """
-    app.logger.debug("Entering list_calendars")  
+    app.logger.debug("Entering list_calendars")
     calendar_list = service.calendarList().list().execute()["items"]
     result = [ ]
     for cal in calendar_list:
         kind = cal["kind"]
         id = cal["id"]
-        if "description" in cal: 
+        if "description" in cal:
             desc = cal["description"]
         else:
             desc = "(no description)"
@@ -288,7 +293,7 @@ def list_calendars(service):
         # Optional binary attributes with False as default
         selected = ("selected" in cal) and cal["selected"]
         primary = ("primary" in cal) and cal["primary"]
-        
+
 
         result.append(
           { "kind": kind,
@@ -298,6 +303,50 @@ def list_calendars(service):
             "primary": primary
             })
     return sorted(result, key=cal_sort_key)
+
+@app.route("/blocktimes", methods=["POST","GET"])
+def blocktimes():
+    app.logger.debug("Entering blocktimes")
+
+    app.logger.debug("Setting session ranges...")
+    calIds = request.form.getlist('calId')
+    credentials = valid_credentials()
+    service = get_gcal_service(credentials)
+    app.logger.debug("Returned from get_gcal_service")
+    print(str(calIds))
+    fb_query = {
+    "timeMin": flask.session['begin_date'],
+    "timeMax": flask.session['end_date'],
+    "items": [
+    {"id":calIds}
+    ]
+    }
+    app.logger.debug("Getting busy times between "+flask.session['begin_date']+" and "+flask.session['end_date'])
+    busytimes = service.freebusy().query(body=fb_query).execute()
+
+    data = []
+    print ("TIME: "+json.dumps(busytimes))
+    for cal in busytimes['calendars']:
+        if cal['busy']:
+            for time in cal['busy']:
+                st = arrow.get(time['start'])
+                et = arrow.get(time['end'])
+                data.append({st,et})
+
+    return jsonify(result=data)
+    #events = service.events().list(calendarId='primary').execute()['items']
+    #for e in events:
+    #    result.append(e)
+    #    print("EVENT: "+str(e))
+    #    for el in e:
+    #        print(el)
+
+        #event = service.events().get(calendarId='primary',eventId=e['id']).execute()
+        #print(event)
+        #if event["transparency"] == 'opaque':
+
+        #    print(event['summary'],event['end'])
+    return flask.redirect('index')
 
 
 def cal_sort_key( cal ):
@@ -325,7 +374,7 @@ def cal_sort_key( cal ):
 
 @app.template_filter( 'fmtdate' )
 def format_arrow_date( date ):
-    try: 
+    try:
         normal = arrow.get( date )
         return normal.format("ddd MM/DD/YYYY")
     except:
@@ -338,7 +387,7 @@ def format_arrow_time( time ):
         return normal.format("HH:mm")
     except:
         return "(bad time)"
-    
+
 #############
 
 
@@ -347,7 +396,7 @@ if __name__ == "__main__":
   # exist whether this is 'main' or not
   # (e.g., if we are running in a CGI script)
 
-  app.secret_key = str(uuid.uuid4())  
+  app.secret_key = str(uuid.uuid4())
   app.debug=CONFIG.DEBUG
   app.logger.setLevel(logging.DEBUG)
   # We run on localhost only if debugging,
@@ -356,6 +405,5 @@ if __name__ == "__main__":
     # Reachable only from the same computer
     app.run(port=CONFIG.PORT)
   else:
-    # Reachable from anywhere 
+    # Reachable from anywhere
     app.run(port=CONFIG.PORT,host="0.0.0.0")
-    

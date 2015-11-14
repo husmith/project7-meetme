@@ -79,11 +79,6 @@
   $(function() {
   $('#daterange').daterangepicker(
     {
-        timePicker: true,
-        timePickerIncrement: 15,
-        locale: {
-            format: 'MM/DD/YYYY h:mm A'
-        },
         ranges: {
            'Today': [moment(), moment()],
            'Tomorrow':[moment().add(1, 'days'),
@@ -99,32 +94,67 @@
   </script>
   </div>
   <div class="row">
-<input class="btn btn-default" type="submit" value="Choose" />
+<input class="btn btn-default" type="submit" value="set range" />
 </div>
 </div>
 </form>
 
 </div>
-
+<div class="row">
+<form id="getcals" method="GET" action="/getcals">
+<button class="btn btn-default" type="submit">Get Calendars</button>
+</form>
+</div>
     <!--
     Show the calendar list (if we have it).  This will need to be turned into
     a form from which calendars can be picked. Up to three entries are
     shown in each row (but the order is across then down; I would
     prefer down then across).
     -->
+    <div class="row">
+    <div class="col-md-8">
+<form id="selectCal" action="/blocktimes" method="POST">
+<div class="row form-group">
+    <h4>Choose which calendars to pull busy times from:</h4>
+<ul class="list-unstyled">
 {% if session.calendars is defined  %}
-  <div class="row">
+
   {% for cal in session.calendars if cal.selected %}
-          <div class="col-md-4">
+
+<li>
+<input type="checkbox" name="calId" value={{ cal.id }}>
 	   {{ cal.summary }}
-          </div>
-         {% if loop.index is divisibleby 3 %}
+</li>
+
+         <!-- {% if loop.index is divisibleby 3 %}
           </div> <div class="row">
-         {% endif %}
+         {% endif %} -->
   {% endfor %}
-  </div>
+
 {% endif %}
+</ul>
+</div>
+<input type="submit" class="btn btn-defalt" value="Block">
+</form>
 </div>
 
+<div class="col-md-4">
+    <span id="result"></span>
+
+
+</div>
+</div>
   </div>  <!-- container (for bootstrap) -->
+  <script type=text/javascript>
+      $(function() {
+        $('input[value="Block"]').bind('click', function() {
+          $.getJSON('/blocktimes', {
+
+          }, function(data) {
+            $("#result").text(data.result);
+          });
+          return false;
+        });
+      });
+    </script>
   </body> </html>
