@@ -141,8 +141,8 @@ def oauth2callback():
   flow =  client.flow_from_clientsecrets(
       CLIENT_SECRET_FILE,
       scope= SCOPES,
-      redirect_uri='http://localhost:5000/oauth2callback')
-  ## Note we are *not* redirecting above.  We are noting *where*
+      redirect_uri=flask.url_for('oauth2callback', _external=True))
+## Note we are *not* redirecting above.  We are noting *where*
   ## we will redirect to, which is this function.
 
   ## The *second* time we enter here, it's a callback
@@ -314,39 +314,34 @@ def blocktimes():
     service = get_gcal_service(credentials)
     app.logger.debug("Returned from get_gcal_service")
     print(str(calIds))
-    fb_query = {
+    ev_query = {
+    "calendarId": 'hannahullensmith@gmail.com',
     "timeMin": flask.session['begin_date'],
-    "timeMax": flask.session['end_date'],
-    "items": [
-    {"id":calIds}
-    ]
+    "timeMax": flask.session['end_date']
     }
     app.logger.debug("Getting busy times between "+flask.session['begin_date']+" and "+flask.session['end_date'])
-    busytimes = service.freebusy().query(body=fb_query).execute()
+    # busytimes = service.freebusy().query(body=fb_query).execute()
+    events = service.events().list(calendarId='primary').execute()['items']
+    for e in events:
+       print("EVENT: "+json.dumps(e))
 
-    data = []
-    print ("TIME: "+json.dumps(busytimes))
-    for cal in busytimes['calendars']:
-        if cal['busy']:
-            for time in cal['busy']:
-                st = arrow.get(time['start'])
-                et = arrow.get(time['end'])
-                data.append({st,et})
-
-    return jsonify(result=data)
-    #events = service.events().list(calendarId='primary').execute()['items']
-    #for e in events:
-    #    result.append(e)
-    #    print("EVENT: "+str(e))
-    #    for el in e:
-    #        print(el)
-
-        #event = service.events().get(calendarId='primary',eventId=e['id']).execute()
-        #print(event)
-        #if event["transparency"] == 'opaque':
-
+        # event = service.events().get(calendarId='primary',eventId=e['id']).execute()
+        # print(event)
+        # if event["transparency"] == 'opaque':
+        #
         #    print(event['summary'],event['end'])
-    return flask.redirect('index')
+    # data = []
+    # print ("TIME: "+json.dumps(busytimes))
+    # for cal in busytimes['calendars']:
+    #     if cal['busy']:
+    #         for time in cal['busy']:
+    #             st = arrow.get(time['start'])
+    #             et = arrow.get(time['end'])
+    #             data.append({st,et})
+
+    return jsonify(result=result)
+
+    #return flask.redirect('index')
 
 
 def cal_sort_key( cal ):
