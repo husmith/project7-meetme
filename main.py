@@ -304,6 +304,8 @@ def list_calendars(service):
             })
     return sorted(result, key=cal_sort_key)
 
+
+
 @app.route("/blocktimes", methods=["POST","GET"])
 def blocktimes():
     app.logger.debug("Entering blocktimes")
@@ -325,6 +327,17 @@ def blocktimes():
     for e in events:
        print("EVENT: "+json.dumps(e))
 
+
+
+    rng_start = arrow.get(flask.session['begin_date'],'MM/DD/YYYY')
+    rng_start.replace(hour=6)
+    rng_end = arrow.get(flask.session['end_date'],'MM/DD/YYYY')
+    rng_end.replace(hour=20)
+
+    ev_start = arrow.get(e['start']['datetime'])
+
+    for r in arrow.Arrow.span_range('hour',rng_start,ev_start):
+        meetings.append(r)
         # event = service.events().get(calendarId='primary',eventId=e['id']).execute()
         # print(event)
         # if event["transparency"] == 'opaque':
