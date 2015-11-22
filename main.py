@@ -2,6 +2,8 @@ import flask
 from flask import render_template
 from flask import request
 from flask import url_for
+from flask import jsonify
+from collections import defaultdict
 import uuid
 
 import json
@@ -9,7 +11,7 @@ import logging
 
 # Date handling
 import arrow # Replacement for datetime, based on moment.js
-import datetime # But we still need time
+from datetime import datetime, date, time, timedelta, tzinfo # But we still need time
 from dateutil import tz  # For interpreting local times
 
 
@@ -62,7 +64,7 @@ def choose():
     gcal_service = get_gcal_service(credentials)
     app.logger.debug("Returned from get_gcal_service")
     flask.session['calendars'] = list_calendars(gcal_service)
-    return flask.render_template('index.html')
+    return flask.redirect('index')
 
 ####
 #
@@ -264,21 +266,6 @@ def next_day(isotext):
     as_arrow = arrow.get(isotext)
     return as_arrow.replace(days=+1).isoformat()
 
-
-
-class Meeting(object):
-    def __init__(self, delta, date):
-        self.start = date.time()
-        self.end = (date + delta).time()
-        self.date = date
-
-    def __repr__(self):
-        st = self.start.format('HH:mm ZZ')
-        et = self.end.format('HH:mm ZZ')
-        d = self.date.format('MM/DD/YYYY')
-        final = d+" "+st+"-"+et
-        return final
-
 ####
 #
 #  Functions (NOT pages) that return some information
@@ -326,87 +313,80 @@ def blocktimes():
     app.logger.debug("Entering blocktimes")
 
     app.logger.debug("Setting session ranges...")
-    calIds = request.form.getlist('calId')
+    calids = request.form.getlist('calid')
+
     credentials = valid_credentials()
     service = get_gcal_service(credentials)
     app.logger.debug("Returned from get_gcal_service")
-    print(str(calIds))
-    ev_query = {
-    "calendarId": 'hannahullensmith@gmail.com',
-    "timeMin": flask.session['begin_date'],
-    "timeMax": flask.session['end_date'],
-    }
-    app.logger.debug("Getting busy times between "+flask.session['begin_date']+" and "+flask.session['end_date'])
-    #busytimes = service.freebusy().query(body=fb_query).execute()
-    events = service.events().list(calendarId='primary',timeMin=flask.session['begin_date'],timeMax=flask.session['end_date']).execute()
+    busy_times = []
+    for cal in calids:
+        app.logger.debug("Getting free times between "+flask.session['begin_date']+" and "+flask.session['end_date'])
+        events = service.events().list(calendarId=cal,singleEvents=True,timeMin=flask.session['begin_date'],timeMax=flask.session['end_date']).execute()
 
-    meetings = get_freetimes(events)
-    for meet in meetings:
-        mstart = meet[0].format('MM/DD/YYYY HH:mm ZZ')
-        mend = meet[1].format('HH:mm ZZ')
-        final = mstart+" - "+mend
-        print(final)
+        for event in events['items']:
+            busy_times.append((arrow.get(event['start']['dateTime']),arrow.get(event['end']['dateTime'])))
 
-    print(meetings)
-    kv = {'start','end'}
-    eve_dct = {key:value for key,value in events['items'].items() if key in kv}
-    for k,v in eve_dct:
-        print(k,v)
-    for event in events['items']:
-        ev_dct = {key:value for key,value in event.items() if key in kv}
-        for k,v in ev_dct:
-            print(k,v)
-        py_st = json.dumps(event)
-        py_obj = json.loads(py_st,parse_constant=['true','false'])
-        print("START: "+py_obj['start']['dateTime'])
-        print("END TIME: "+py_obj['end']['dateTime'])
+    free_times = []
+
+    b = arrow.get(flask.session['begin_date'])
+    e = arrow.get(flask.session['end_date'])
+
+    rng_hours = [b.replace(hour=6), e.replace(hour=20)]
+
+    for day in arrow.Arrow.range('day',b.replace(hour=6),e.replace(hour=20)):
+        if not (any(y[0].date() == day.date() for y in busy_times)) and not (any(x[0].date() == day.date() for x in free_times)):
+            free_times.append((day.replace(hour=6),day.replace(hour=20)))
 
 
+    app.logger.debug("Free times: "+repr(free_times))
+    app.logger.debug("Busy days: "+repr(busy_times))
 
-        # event = service.events().get(calendarId='primary',eventId=e['id']).execute()
-        # print(event)
-        # if event["transparency"] == 'opaque':
-        #
-        #    print(event['summary'],event['end'])
-    # data = []
-    # print ("TIME: "+json.dumps(busytimes))
-    # for cal in busytimes['calendars']:
-    #     if cal['busy']:
-    #         for time in cal['busy']:
-    #             st = arrow.get(time['start'])
-    #             et = arrow.get(time['end'])
-    #             data.append({st,et})
 
-    return jsonify(result=result)
-
-    #return flask.redirect('index')
-def get_freetimes(events):
     meetings = []
 
-    start = events['items'][0]['start']['dateTime']
-    end = events['items'][0]['end']['dateTime']
-    min_t = start.replace(hour=6)
-    max_t = end.replace(hour=20)
+    times_by_date = defaultdict(list)
+
+    for t in busy_times:
+        times_by_date[t[0].date()].append(t)
 
 
+    for key in times_by_date:
+        start_t = times_by_date[key][0][0].replace(hour=6)
+        end_t = times_by_date[key][0][0].replace(hour=20)
+        free_times.extend(get_freetimes(start_t,end_t, times_by_date[key]))
 
-    for event in events['items']:
-        py_st = json.dumps(event)
-        py_obj = json.loads(py_st,parse_constant=['true','false'])
+    print(repr(free_times))
 
-        st = arrow.get(py_obj['start']['dateTime'])
+    for beg,en in free_times:
+        mstart = beg.format('dddd, MMMM D YYYY h:mm')
+        mend = en.format('h:mm a')
+        final = mstart+" - "+mend
+        print(final)
+        meetings.append(final)
 
-        et = arrow.get(py_obj['end']['dateTime'])
+
+    app.logger.debug("Meetings: "+str(meetings))
 
 
-        min_t = st.replace(hour=6)
-        max_t = st.replace(hour=20)
+    # py_st = json.dumps(event)
+    # py_obj = json.loads(py_st,parse_constant=['true','false'])
+    # print("START: "+py_obj['start']['dateTime'])
+    # print("END TIME: "+py_obj['end']['dateTime'])
 
-        if (st - min_t):
-            delta = st - min_t
-            free = [st,(st+delta)]
-            meetings.append(free)
-    return meetings
+    return render_template('index.html',meetings=meetings)
+
+
+def get_freetimes(start_t,end_t, busy_times):
+    meetings = sorted([(start_t,start_t)] + busy_times + [(end_t,end_t)])
+    free_times = []
+    for start,end in ((meetings[i][1], meetings[i+1][0]) for i in range(len(meetings)-1)):
+        assert start <= end, "Cannot attend"
+        if start < end:
+            free_times.append((start,end))
+            print("start: "+repr(start)+"\nend: "+repr(end))
+
+
+    return free_times
 
 
 

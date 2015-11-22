@@ -7,17 +7,45 @@
  * out how to install clean-css on ix, so for now I'll explicitly load all the
  * style sheets in the html.
  */
+ /*@import url(http://fonts.googleapis.com/css?family=Lato:300,400,700);*/
  body {
-   font-size: 1rem;
-   line-height: 1.4;
-   font-family: "Source Sans Pro", Helvetica, Arial, sans-serif;
-   font-weight: 300;
-   color: #002c3c;
-    background-color: "#ccffcc";
+   font-size: 1.5em;
+   line-height: 1em;
+   font-family: "proxima-nova", sans-serif;
+   letter-spacing: 0.05em;
+   font-weight: 400;
+   background: #fb887c;
+   color: #fff;
+   text-rendering: optimizeLegibility;
+}
+
+button#btn-custom{
+    text-decoration: none;
+    font-family: "proxima-nova", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 1.5em;
+    line-height: 1em;
+    margin-bottom: 8px;
+    text-rendering: optimizeLegibility;
+}
+button#btn-custom:hover {
+    color: #999;
 }
 .center_div {
     margin: 0 auto;
     width: 80%;
+}
+h1 {
+    font-family: "proxima-nova", sans-serif;
+    letter-spacing: -0.01em;
+    font-weight: 700;
+    font-style: normal;
+    font-size: 60px;
+    line-height: 1em;
+    text-transform: lowercase;
+    margin-bottom: 8px;
+    text-rendering: optimizeLegibility;
 }
 
 #daterange {

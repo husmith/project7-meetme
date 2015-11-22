@@ -3,17 +3,13 @@
 <title>Appointments</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link rel="stylesheet" type="text/css"
-     href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css"
-/>
+
 
 <link rel="stylesheet" type="text/css"
  href="/static/js/node_modules/bootstrap-daterangepicker/daterangepicker.css"
 />
 
-<link rel="stylesheet" type="text/css"
-    href="/static/css/busy.css"
-/>
+
 
 <!-- jquery from a content distribution network; probably cached -->
 <script type="text/javascript"
@@ -29,8 +25,11 @@
 <!-- Include Required Prerequisites -->
 <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/1/jquery.min.js"></script>
 <script type="text/javascript" src="//cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css" />
+<link rel="stylesheet" type="text/css" href="/static/css/busy.css"/>
+<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css"/>
+
 <script type="text/javascript" src="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.js"></script>
+
 <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.css" />
 
 
@@ -39,7 +38,8 @@
 <body>
 <div class="container">
 <div class="row">
-<h1 class="text-center">MeetMe? | <small>busy times</small></h1>
+<h1 class="text-center" style="padding:10px;color:#fff;">MeetMe? | <small>busy times</small></h1>
+</div>
 </div>
 <!--
   -- If there are any warnings or other messages from a prior action,
@@ -58,22 +58,19 @@
 {% endwith %}
 
 <div class="container">
-    <div class="row">
-<h2 class="text-center">Looking to meet...</h2>
-</div>
-
-
-
+<div class="row">
+<div class="col-md-10 pull-left" style="border-right:1px solid #ccc;">
   <form id="enterDate" action="/setrange" method="post">
       <div class="center-block">
-      <div class="row">
-  <input id="daterange" type="text" name="daterange"
-    {% if session.daterange is defined %}
-         value="{{session.daterange}}"
-    {% endif %}
-     class="pull-down input-lg col-md-9"
-     style="text-align: center; background: #fff; cursor: pointer; padding: 5px 10px;
-     border: 1px solid #ccc;" >
+          <div class="row">
+              <input id="daterange" type="text" name="daterange"
+              {% if session.daterange is defined %} value="{{session.daterange}}" {% endif %}
+              class="pull-down input-lg col-md-6"
+              style="text-align: center;
+              background: #fff;
+              cursor: pointer;
+              padding: 5px 10px;
+              border: 1px solid #ccc;" >
 
   <script type="text/javascript">
   $(function() {
@@ -92,69 +89,74 @@
        );
     });
   </script>
-  </div>
-  <div class="row">
-<input class="btn btn-default" type="submit" value="set range" />
+
+<div class="col-md-3">
+    <input id="btn-custom" class="btn btn-default" type="submit" value="set range" />
+</div>
 </div>
 </div>
 </form>
 
-</div>
-<div class="row">
-<form id="getcals" method="GET" action="/getcals">
-<button class="btn btn-default" type="submit">Get Calendars</button>
-</form>
-</div>
+
+    <form id="getcals" method="GET" action="/getcals">
+        <div class="row">
+        <button id="btn-custom" class="btn btn-default" type="submit">Get Calendars</button>
+    </div>
+    </form>
+
     <!--
     Show the calendar list (if we have it).  This will need to be turned into
     a form from which calendars can be picked. Up to three entries are
     shown in each row (but the order is across then down; I would
     prefer down then across).
     -->
-    <div class="row">
-    <div class="col-md-8">
-<form id="selectCal" action="/blocktimes" method="POST">
+
+<form id="selectCal" action="/blocktimes" method="post">
 <div class="row form-group">
-    <h4>Choose which calendars to pull busy times from:</h4>
-<ul class="list-unstyled">
-{% if session.calendars is defined  %}
+
+<ul class="list-inline">
+    <div class="col-md-4">
+    <li>
+    <ul class="list-unstyled">
+        {% if session.calendars is defined  %}
 
   {% for cal in session.calendars if cal.selected %}
 
 <li>
-<input type="checkbox" name="calId" value={{ cal.id }}>
+<input type="checkbox" name="calid" value={{ cal.id }}>
 	   {{ cal.summary }}
 </li>
 
-         <!-- {% if loop.index is divisibleby 3 %}
-          </div> <div class="row">
-         {% endif %} -->
+         {% if loop.index is divisibleby 3 %}
+    </ul></div><div class="col-md-4"><li>
+         {% endif %}
   {% endfor %}
 
 {% endif %}
-</ul>
+</li>
 </div>
-<input type="submit" class="btn btn-defalt" value="Block">
+</ul>
+
+</div>
+<div class="row">
+<input type="submit" id="btn-custom" class="btn btn-default" value="Block">
+</div>
 </form>
 </div>
 
-<div class="col-md-4">
-    <span id="result"></span>
+<div class="col-md-2 pull-right">
+    <span id="result">{% if meetings %}
+        <ul class="list-unstyled">
 
-
+        {% for time in meetings %}
+            <li><input type="checkbox" name="time" value={{ time }}>{{ time }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </span>
 </div>
+
 </div>
   </div>  <!-- container (for bootstrap) -->
-  <script type=text/javascript>
-      $(function() {
-        $('input[value="Block"]').bind('click', function() {
-          $.getJSON('/blocktimes', {
 
-          }, function(data) {
-            $("#result").text(data.result);
-          });
-          return false;
-        });
-      });
-    </script>
   </body> </html>
