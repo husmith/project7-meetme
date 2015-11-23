@@ -9,6 +9,8 @@ import uuid
 import json
 import logging
 
+from meetme import Agenda, Appt
+
 # Date handling
 import arrow # Replacement for datetime, based on moment.js
 from datetime import datetime, date, time, timedelta, tzinfo # But we still need time
@@ -312,82 +314,34 @@ def list_calendars(service):
 def blocktimes():
     app.logger.debug("Entering blocktimes")
 
-    app.logger.debug("Setting session ranges...")
+    # Get ids of checked calendars
     calids = request.form.getlist('calid')
 
     credentials = valid_credentials()
     service = get_gcal_service(credentials)
     app.logger.debug("Returned from get_gcal_service")
-    busy_times = []
+
+    busy_times = Agenda()
+
+    # For each calendar, get the events within the specified range
     for cal in calids:
         app.logger.debug("Getting free times between "+flask.session['begin_date']+" and "+flask.session['end_date'])
         events = service.events().list(calendarId=cal,singleEvents=True,timeMin=flask.session['begin_date'],timeMax=flask.session['end_date']).execute()
 
         for event in events['items']:
-            busy_times.append((arrow.get(event['start']['dateTime']),arrow.get(event['end']['dateTime'])))
+            busy = Appt(arrow.get(event['start']['dateTime']).date(),arrow.get(event['start']['dateTime']).time(),arrow.get(event['end']['dateTime']).time(),"busy")
+            busy_times.append(busy)
 
-    free_times = []
+    begin_date = arrow.get(flask.session['begin_date'])
+    end_date = arrow.get(flask.session['end_date'])
 
-    b = arrow.get(flask.session['begin_date'])
-    e = arrow.get(flask.session['end_date'])
+    busy_times.normalize()
 
-    rng_hours = [b.replace(hour=6), e.replace(hour=20)]
+    meetings = busy_times.free_blocks(begin_date,end_date,6,20)
 
-    for day in arrow.Arrow.range('day',b.replace(hour=6),e.replace(hour=20)):
-        if not (any(y[0].date() == day.date() for y in busy_times)) and not (any(x[0].date() == day.date() for x in free_times)):
-            free_times.append((day.replace(hour=6),day.replace(hour=20)))
-
-
-    app.logger.debug("Free times: "+repr(free_times))
-    app.logger.debug("Busy days: "+repr(busy_times))
-
-
-    meetings = []
-
-    times_by_date = defaultdict(list)
-
-    for t in busy_times:
-        times_by_date[t[0].date()].append(t)
-
-
-    for key in times_by_date:
-        start_t = times_by_date[key][0][0].replace(hour=6)
-        end_t = times_by_date[key][0][0].replace(hour=20)
-        free_times.extend(get_freetimes(start_t,end_t, times_by_date[key]))
-
-    print(repr(free_times))
-
-    for beg,en in free_times:
-        mstart = beg.format('dddd, MMMM D YYYY h:mm')
-        mend = en.format('h:mm a')
-        final = mstart+" - "+mend
-        print(final)
-        meetings.append(final)
-
-
-    app.logger.debug("Meetings: "+str(meetings))
-
-
-    # py_st = json.dumps(event)
-    # py_obj = json.loads(py_st,parse_constant=['true','false'])
-    # print("START: "+py_obj['start']['dateTime'])
-    # print("END TIME: "+py_obj['end']['dateTime'])
+    meetings.normalize()
 
     return render_template('index.html',meetings=meetings)
-
-
-def get_freetimes(start_t,end_t, busy_times):
-    meetings = sorted([(start_t,start_t)] + busy_times + [(end_t,end_t)])
-    free_times = []
-    for start,end in ((meetings[i][1], meetings[i+1][0]) for i in range(len(meetings)-1)):
-        assert start <= end, "Cannot attend"
-        if start < end:
-            free_times.append((start,end))
-            print("start: "+repr(start)+"\nend: "+repr(end))
-
-
-    return free_times
-
 
 
 def cal_sort_key( cal ):
