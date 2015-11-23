@@ -23,13 +23,16 @@
 <!-- 'minified' by 'browserify'  -->
 
 <!-- Include Required Prerequisites -->
-<script type="text/javascript" src="//cdn.jsdelivr.net/jquery/1/jquery.min.js"></script>
+<script type="text/javascript"
+src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/js/bootstrap.min.js"></script>
+
+
 <script type="text/javascript" src="//cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css" />
+
 <link rel="stylesheet" type="text/css" href="/static/css/busy.css"/>
-<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css"/>
 
 <script type="text/javascript" src="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.js"></script>
-
 <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.css" />
 
 
@@ -38,7 +41,7 @@
 <body>
 <div class="container">
 <div class="row">
-<h1 class="text-center" style="padding:10px;color:#fff;">MeetMe? | <small>busy times</small></h1>
+<h1 class="text-center" id="header">MeetMe?</h1>
 </div>
 </div>
 <!--
@@ -59,13 +62,16 @@
 
 <div class="container">
 <div class="row">
-<div class="col-md-10 pull-left" style="border-right:1px solid #ccc;">
-  <form id="enterDate" action="/setrange" method="post">
-      <div class="center-block">
+<!-- <div class="col-md-10 pull-left" style="border-right:1px solid #ccc;"> -->
+
+  <form id="enterDate" action="{{ url_for('setrange') }}" method="post">
+
           <div class="row">
+
+
               <input id="daterange" type="text" name="daterange"
               {% if session.daterange is defined %} value="{{session.daterange}}" {% endif %}
-              class="pull-down input-lg col-md-6"
+              class="pull-down input-lg col-sm-12 col-md-9"
               style="text-align: center;
               background: #fff;
               cursor: pointer;
@@ -90,17 +96,17 @@
     });
   </script>
 
-<div class="col-md-3">
-    <input id="btn-custom" class="btn btn-default" type="submit" value="set range" />
+<div class="col-sm-3 pull-right">
+    <button id="btn-custom" class="btn btn-default btn-lg" type="submit">Set Range</button>
 </div>
-</div>
+
 </div>
 </form>
 
 
     <form id="getcals" method="GET" action="/getcals">
         <div class="row">
-        <button id="btn-custom" class="btn btn-default" type="submit">Get Calendars</button>
+        <button class="btn btn-default" type="submit">Get Google Calendars</button>
     </div>
     </form>
 
@@ -110,50 +116,70 @@
     shown in each row (but the order is across then down; I would
     prefer down then across).
     -->
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-lg">Calendars</button>
 
-<form id="selectCal" action="/blocktimes" method="post">
-<div class="row form-group">
+    <div class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+<div class="row">
+            <form id="selectCal" action="{{ url_for('blocktimes') }}" method="post">
 
+    {% if session.calendars is defined  %}
+    <div class="modal-body">
+
+<ul class="list-inline">
+<div class="col-md-6">
+
+<li>
+<ul class="list-unstyled">
+{% for cal in session.calendars if cal.selected %}
+<li><input type="checkbox" name="calid" value={{ cal.id }}>{{ cal.summary }}</li>
+{% if loop.index is divisibleby 4 %}
+</ul>
+</li>
+<li><ul class="list-unstyled">
+{% endif %}
+{% endfor %}
+</ul>
+</li>
+</div>
+</ul>
+</div>
+{% endif %}
+
+            <div class="modal-footer">
+            <input type="submit" id="btn-custom" class="btn btn-default" value="Block">
+            </div>
+        </form>
+
+
+
+        </div>
+      </div>
+    </div>
+
+
+<!-- </div> -->
+
+<!-- <div class="col-md-2 pull-right"> -->
+<div class="row">
+{% if meetings %}
 <ul class="list-inline">
     <div class="col-md-4">
     <li>
     <ul class="list-unstyled">
-        {% if session.calendars is defined  %}
+{% for time in meetings.appts %}
+        <li><input type="checkbox" name="time" value={{ time }}> {{ time }}</li>
 
-  {% for cal in session.calendars if cal.selected %}
-
-<li>
-<input type="checkbox" name="calid" value={{ cal.id }}>
-	   {{ cal.summary }}
-</li>
-
-         {% if loop.index is divisibleby 3 %}
-    </ul></div><div class="col-md-4"><li>
-         {% endif %}
-  {% endfor %}
+            {% if loop.index is divisibleby 10 %}
+            </ul></div><div class="col-md-4"><li>
+            {% endif %}
+            {% endfor %}
 
 {% endif %}
 </li>
 </div>
 </ul>
-
-</div>
-<div class="row">
-<input type="submit" id="btn-custom" class="btn btn-default" value="Block">
-</div>
-</form>
-</div>
-
-<div class="col-md-2 pull-right">
-    <span id="result">{% if meetings %}
-        <ul class="list-unstyled">
-
-        {% for time in meetings %}
-            <li><input type="checkbox" name="time" value={{ time }}>{{ time }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-    </span>
 </div>
 
 </div>
