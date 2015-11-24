@@ -6,6 +6,7 @@ import arrow
 import unittest
 import nose.tools
 
+
 class agendaTestClass(unittest.TestCase):
 
     def setUp(self):
@@ -14,10 +15,17 @@ class agendaTestClass(unittest.TestCase):
         main.app.secret_key = str(uuid.uuid4())
 
     def test_status(self):
+        """
+        Test that app can make initial connection.
+        """
         result = self.app.get('/')
         self.assertEqual(result.status_code,200)
 
     def test_no_free_time(self):
+        """
+        Tests that Agendas busy during the times a person is free returns no
+        possible meeting times.
+        """
         begin_time = datetime.time(9,0)
         end_time = datetime.time(17,0)
         begin_date = datetime.date(2015, 9, 2)
@@ -37,6 +45,10 @@ class agendaTestClass(unittest.TestCase):
         self.assertEqual(result.__len__(),0)
 
     def test_all_free_time(self):
+        """
+        Tests that an Agenda with events that fall outside of possible meeting Hours
+        returns all days in range as possible meeting times.
+        """
         begin_time = datetime.time(9,0)
         end_time = datetime.time(17,0)
         begin_date = datetime.date(2015, 12, 1)
@@ -54,6 +66,10 @@ class agendaTestClass(unittest.TestCase):
         self.assertTrue(result.__eq__(expected),msg="Agendas not equal")
 
     def test_events_bleed_outside_hours(self):
+        """
+        Tests that events starting outside of hour range and/or continuing outside
+        of hours range are partially factored into the possible meeting times.
+        """
         begin_time = datetime.time(9,0)
         end_time = datetime.time(17,0)
         begin_date = datetime.date(2015, 9, 1)
@@ -74,6 +90,10 @@ class agendaTestClass(unittest.TestCase):
 
 
     def test_freeblock_longer_range(self):
+        """
+        Tests for full day (within hour range) return when less days have events
+        than those in the freeblock range.
+        """
         begin_time = datetime.time(9,0)
         end_time = datetime.time(17,0)
         begin_date = datetime.date(2015, 9, 1)
@@ -98,6 +118,9 @@ class agendaTestClass(unittest.TestCase):
 
 
     def test_arrow_to_appt(self):
+        """
+        Tests the conversion of arrow objects to Appt.
+        """
         test_date_begin = arrow.get('2015-11-20T00:00:00-08:00')
         test_date_end = arrow.get('2015-11-20T15:30:00-08:00')
 
@@ -110,6 +133,10 @@ class agendaTestClass(unittest.TestCase):
 
 
     def test_different_timezones(self):
+        """
+        Tests for correct handling of different timezones when converting arrow
+        to appointments.
+        """
         test_date_pst = arrow.get('2015-11-20T08:00:00-08:00').to('local')
         test_date_gmt = arrow.get('2015-11-20T00:00:00+08:00').to('local')
 
@@ -121,6 +148,9 @@ class agendaTestClass(unittest.TestCase):
         self.assertTrue(appt_pst.__eq__(appt_gmt))
 
     def test_empty_events(self):
+        """
+        Tests for all times possible returned when the events are in different month.
+        """
         begin_time = datetime.time(9,0)
         end_time = datetime.time(17,0)
         begin_date = datetime.date(2015, 9, 2)

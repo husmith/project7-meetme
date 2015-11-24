@@ -1,0 +1,78 @@
+{
+ "kind": "calendar#calendarList",
+ "etag": "\"1448142551240000\"",
+ "nextSyncToken": "CMCa57K_oskCEhpoYW5uYWh1bGxlbnNtaXRoQGdtYWlsLmNvbQ==",
+ "items": [
+  {
+
+   "kind": "calendar#calendarListEntry",
+   "etag": "\"1448142551240000\"",
+   "id": "TestCal",
+   "summary": "TestCal",
+   "timeZone": "America/Los_Angeles",
+   "colorId": "19",
+   "backgroundColor": "#c2c2c2",
+   "foregroundColor": "#000000",
+   "selected": true,
+   "accessRole": "owner",
+   "defaultReminders": [
+   ]
+  },
+  {
+
+   "kind": "calendar#calendarListEntry",
+   "etag": "\"1447455064261000\"",
+   "id": "TestCalTwo",
+   "summary": "TestCalTwo",
+   "timeZone": "America/Los_Angeles",
+   "colorId": "17",
+   "backgroundColor": "#9a9cff",
+   "foregroundColor": "#000000",
+   "selected": true,
+   "accessRole": "owner",
+   "defaultReminders": [
+    {
+     "method": "popup",
+     "minutes": 30
+    }
+   ],
+   "notificationSettings": {
+    "notifications": [
+     {
+      "type": "eventCreation",
+      "method": "email"
+     },
+     {
+      "type": "eventChange",
+      "method": "email"
+     },
+     {
+      "type": "eventCancellation",
+      "method": "email"
+     },
+     {
+      "type": "eventResponse",
+      "method": "email"
+     }
+    ]
+   },
+   "primary": true
+  },
+  
+  {
+   "kind": "calendar#calendarListEntry",
+   "etag": "\"1448140950996000\"",
+   "id": "e_2_en#weeknum@group.v.calendar.google.com",
+   "summary": "Week Numbers",
+   "description": "Week numbers displayed weekly",
+   "timeZone": "America/Los_Angeles",
+   "colorId": "21",
+   "backgroundColor": "#cca6ac",
+   "foregroundColor": "#000000",
+   "selected": true,
+   "accessRole": "reader",
+   "defaultReminders": [
+   ]
+  }
+ ]
+}
