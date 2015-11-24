@@ -305,7 +305,7 @@ class Agenda:
             comp.append(Appt(day, cur_time.time(), freeblock.end.time(), desc))
         return comp
 
-    def free_blocks(self, start_day, end_day, start_hr, end_hr):
+    def freeblocks(self, start_day, end_day, start_time, end_time, desc=""):
         """Produce the complement of an agenda
         within the span of a timeblock represented by
         an appointment.  For example,
@@ -325,10 +325,10 @@ class Agenda:
         """
         copy = self.normalized()
         comp = Agenda()
-        desc = "meeting"
+        desc = desc
 
         for dayt in arrow.Arrow.range('day',arrow.get(start_day),arrow.get(end_day)):
-            freeblock = Appt(dayt.date(), dayt.time().replace(hour=start_hr),dayt.time().replace(hour=end_hr),"freeblock")
+            freeblock = Appt(dayt.date(), dayt.time().replace(hour=start_time.hour,minute=start_time.minute),dayt.time().replace(hour=end_time.hour,minute=end_time.minute),"freeblock")
             day = freeblock.begin.date()
             cur_time = freeblock.begin
             for appt in copy.appts:

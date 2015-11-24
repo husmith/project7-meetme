@@ -116,73 +116,56 @@ src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/js/boo
     shown in each row (but the order is across then down; I would
     prefer down then across).
     -->
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-lg">Calendars</button>
 
-    <div class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
 <div class="row">
-            <form id="selectCal" action="{{ url_for('blocktimes') }}" method="post">
+<form id="selectCal" action="{{ url_for('blocktimes') }}" method="post">
 
     {% if session.calendars is defined  %}
-    <div class="modal-body">
+
 
 <ul class="list-inline">
-<div class="col-md-6">
-
 <li>
+
 <ul class="list-unstyled">
 {% for cal in session.calendars if cal.selected %}
 <li><input type="checkbox" name="calid" value={{ cal.id }}>{{ cal.summary }}</li>
-{% if loop.index is divisibleby 4 %}
+{% if loop.index is divisibleby 3 %}
 </ul>
+
 </li>
 <li><ul class="list-unstyled">
 {% endif %}
 {% endfor %}
 </ul>
 </li>
-</div>
+
 </ul>
-</div>
 {% endif %}
-
-            <div class="modal-footer">
-            <input type="submit" id="btn-custom" class="btn btn-default" value="Block">
-            </div>
+<input type="submit" id="btn-custom" class="btn btn-default" value="Block">
         </form>
-
-
-
         </div>
-      </div>
-    </div>
-
-
-<!-- </div> -->
 
 <!-- <div class="col-md-2 pull-right"> -->
 <div class="row">
 {% if meetings %}
 <ul class="list-inline">
-    <div class="col-md-4">
     <li>
     <ul class="list-unstyled">
 {% for time in meetings.appts %}
         <li><input type="checkbox" name="time" value={{ time }}> {{ time }}</li>
-
-            {% if loop.index is divisibleby 10 %}
-            </ul></div><div class="col-md-4"><li>
-            {% endif %}
-            {% endfor %}
-
+{% if loop.index is divisibleby 10 %}
+</ul></li><li><ul class="list-unstyled">
 {% endif %}
-</li>
-</div>
+{% endfor %}
 </ul>
+</li>
+</ul>
+{% endif %}
+
 </div>
 
 </div>
   </div>  <!-- container (for bootstrap) -->
 
-  </body> </html>
+  </body>
+  </html>

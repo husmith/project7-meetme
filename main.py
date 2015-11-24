@@ -44,12 +44,13 @@ APPLICATION_NAME = 'googly'
 @app.route("/index")
 def index():
   app.logger.debug("Entering index")
+
   if 'use_gcal' in flask.session and flask.session['use_gcal']:
     credentials = valid_credentials()
     if not credentials:
       return flask.redirect(flask.url_for('oauth2callback'))
   if 'begin_date' not in flask.session:
-    init_session_values()
+      init_session_values()
   return render_template('index.html')
 
 @app.route("/getcals")
@@ -310,17 +311,23 @@ def list_calendars(service):
 
 
 
-@app.route("/blocktimes", methods=["POST","GET"])
+@app.route("/blocktimes", methods=['POST','GET'])
 def blocktimes():
+    """
+    Retrieves the events from the selected calendars using the Google Calendar API.
+    Events are inserted into an Agenda as Appointements. Agenda.freeblock then returns
+    an Agenda of the possible meeting times, which is then rendered on the webpage.
+    """
     app.logger.debug("Entering blocktimes")
 
-    # Get ids of checked calendars
+    # Get ids of selected calendars from form
     calids = request.form.getlist('calid')
 
     credentials = valid_credentials()
     service = get_gcal_service(credentials)
     app.logger.debug("Returned from get_gcal_service")
 
+    # Agenda of all the events that occur within the specified date range
     busy_times = Agenda()
 
     # For each calendar, get the events within the specified range
@@ -335,13 +342,20 @@ def blocktimes():
     begin_date = arrow.get(flask.session['begin_date'])
     end_date = arrow.get(flask.session['end_date'])
 
+    begin_time = arrow.get(flask.session['begin_time']).time()
+    end_time = arrow.get(flask.session['end_time']).time()
+
+
+    # Calling normalize makes sure that overlapping events are merged
     busy_times.normalize()
 
-    meetings = busy_times.free_blocks(begin_date,end_date,6,20)
+    # Make a new Agenda with all the free times
+    meetings = busy_times.freeblocks(begin_date, end_date, begin_time, end_time)
 
+    # Merge overlapping free times (if they exist) as a precaution
     meetings.normalize()
 
-    return render_template('index.html',meetings=meetings)
+    return flask.render_template('index.html',meetings=meetings)
 
 
 def cal_sort_key( cal ):
@@ -401,4 +415,5 @@ if __name__ == "__main__":
     app.run(port=CONFIG.PORT)
   else:
     # Reachable from anywhere
-    app.run(port=CONFIG.PORT,host="0.0.0.0")
+
+    app.run(port=CONFIG.PORT,host="0.0.0.0",debug=True)
