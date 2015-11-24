@@ -1,0 +1,36 @@
+{"items": [
+ {
+"kind": "calendar#event",
+   "etag": "\"2894532157618000\"",
+   "id": "785hcplv0g0flh8q74goes59to",
+   "status": "confirmed",
+   "htmlLink": "https://www.google.com/calendar/event?eid=Nzg1aGNwbHYwZzBmbGg4cTc0Z29lczU5dG8gaGFubmFodWxsZW5zbWl0aEBt",
+   "created": "2015-11-11T18:21:18.000Z",
+   "updated": "2015-11-11T18:21:18.809Z",
+   "summary": "Haley's Birthday",
+   "colorId": "4",
+   "creator": {
+    "email": "hannahullensmith@gmail.com",
+    "displayName": "Hannah Smith",
+    "self": true
+   },
+   "organizer": {
+    "email": "hannahullensmith@gmail.com",
+    "displayName": "Hannah Smith",
+    "self": true
+   },
+   "start": {
+    "date": "2015-11-18"
+   },
+   "end": {
+    "date": "2015-11-19"
+   },
+   "transparency": "transparent",
+   "iCalUID": "785hcplv0g0flh8q74goes59to@google.com",
+   "sequence": 0,
+   "guestsCanInviteOthers": false,
+   "guestsCanSeeOtherGuests": false,
+   "reminders": {
+    "useDefault": false
+   }
+  }]}
