@@ -6,6 +6,8 @@ from flask import jsonify
 from collections import defaultdict
 import uuid
 
+import string
+import random
 import json
 import logging
 
@@ -24,11 +26,28 @@ import httplib2   # used in oauth2 flow
 # Google API for services
 from apiclient import discovery
 
+# Mongo database
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+from flask import jsonify
 ###
 # Globals
 ###
 import CONFIG
 app = flask.Flask(__name__)
+
+try:
+    dbclient = MongoClient(CONFIG.MONGO_URL)
+    db = dbclient.meetme
+    collection = db.meetings
+
+except:
+    print("Failure opening database.  Is Mongo running? Correct password?")
+    sys.exit(1)
+
+import uuid
+app.secret_key = str(uuid.uuid4())
+
 
 SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
 CLIENT_SECRET_FILE = CONFIG.GOOGLE_LICENSE_KEY  ## You'll need this
@@ -52,6 +71,16 @@ def index():
   if 'begin_date' not in flask.session:
       init_session_values()
   return render_template('index.html')
+
+#key: CKN23
+@app.route("/meetings/<key>")
+def meeting_data(key):
+    #check if user is same
+    available_other = get_meetings(key)
+    print(str(available_other))
+    flask.session['available_other'] = key
+    return flask.render_template('index.html')
+
 
 @app.route("/getcals")
 def choose():
@@ -274,6 +303,40 @@ def next_day(isotext):
 #  Functions (NOT pages) that return some information
 #
 ####
+def generate_key():
+    ran = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(5)])
+    return ran
+
+def put_meetings(meetings,key):
+    """
+    Place memo into database
+    Args:
+       dt: Datetime (arrow) object
+       mem: Text of memo
+    NOT TESTED YET
+    """
+    key_dict = {"key":key}
+    available = []
+    for appt in meetings.appts:
+        meet = {"start": appt.begin, "end": appt.end}
+        meet.update(key_dict)
+        collection.insert(meet)
+        available.append(meet)
+
+    print(str(available))
+
+    return
+
+
+def get_meetings(key):
+    records = []
+    meetings = collection.find({"key":key})
+    other_agenda = Agenda()
+    for meeting in meetings:
+        time = Appt(meeting['start'].date(),meeting['start'].time(),meeting['end'].time(),"meetme");
+        other_agenda.append(time);
+    print(str(other_agenda))
+    return other_agenda
 
 def list_calendars(service):
     """
@@ -309,7 +372,9 @@ def list_calendars(service):
             })
     return sorted(result, key=cal_sort_key)
 
-
+@app.route("/intersection")
+def intersection(available_other):
+    pass
 
 @app.route("/blocktimes", methods=['POST','GET'])
 def blocktimes():
@@ -351,9 +416,20 @@ def blocktimes():
 
     # Make a new Agenda with all the free times
     meetings = busy_times.freeblocks(begin_date, end_date, begin_time, end_time)
-
     # Merge overlapping free times (if they exist) as a precaution
     meetings.normalize()
+    put_meetings(meetings,key=generate_key());
+
+    if 'available_other' in flask.session:
+        available_o = get_meetings(flask.session['available_other'])
+        available_intersect = meetings.intersect(available_o)
+        available_intersect.normalize()
+        app.logger.debug("meetings:")
+        print(str(meetings))
+        app.logger.debug("other:")
+        print(str(available_o))
+        app.logger.debug("Returning intersect")
+        return flask.render_template('index.html',meetings=available_intersect)
 
     return flask.render_template('index.html',meetings=meetings)
 
