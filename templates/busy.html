@@ -3,34 +3,47 @@
 <title>Appointments</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link rel=stylesheet type=text/css href="/static/css/propose.min.css">
 
-<!-- jquery doesn't follow npm rules; load it directly, not through -->
-<!-- @require -->
-<script
+
+<link rel="stylesheet" type="text/css"
+ href="/static/js/node_modules/bootstrap-daterangepicker/daterangepicker.css"
+/>
+
+
+
+<!-- jquery from a content distribution network; probably cached -->
+<script type="text/javascript"
      src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js">
 </script>
 
+<!-- <script type="text/javascript"
+   src="/static/js/busy.js">
+</script> -->
+<!-- The rest of our javascript dependencies are bundled and -->
+<!-- 'minified' by 'browserify'  -->
 
-<!-- The rest of our libraries are loaded with the minified version of -->
-<!-- our main javascript application file -->
+<!-- Include Required Prerequisites -->
 <script type="text/javascript"
-   src="/static/js/propose.min.js">
-</script>
+src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/js/bootstrap.min.js"></script>
 
-<link rel="stylesheet" type="text/css"
-     href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css" />
+
+<script type="text/javascript" src="//cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css" />
+
+<link rel="stylesheet" type="text/css" href="/static/css/busy.css"/>
+
+<script type="text/javascript" src="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.js"></script>
+<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.css" />
 
 
 </head>
 
 <body>
 <div class="container">
-
-    <div class="row">
-    <h1 class="text-center">MeetMe | <small>busy times</small></h1>
-    </div>
-
+<div class="row">
+<h1 class="text-center" id="header">MeetMe?</h1>
+</div>
+</div>
 <!--
   -- If there are any warnings or other messages from a prior action,
   -- they appear above the rest of the content, just until the next
@@ -47,45 +60,81 @@
   {% endif %}
 {% endwith %}
 
-<h2>Date range</h2>
-  <form action="/setrange" method="post">
-  <input type="text" name="daterange"
-    {% if session.daterange is defined %}
-         value="{{session.daterange}}"
-    {% endif %}
-     class="pull-left"
-     style="background: #fff; cursor: pointer; padding: 5px 10px;
-     border: 1px solid #ccc; width: 100%" >
-  <script type="text/javascript">
-  $(function() {
-  $('input[name="daterange"]').daterangepicker(
-    {    ranges: {
-           'Today': [moment(), moment()],
-           'Tomorrow':[moment().add(1, 'days'),
-                       moment().add(1, 'days')],
-           'This week':[moment(), moment().endOf('week')],
-           'Next week':[moment().add(7, 'days').startOf('week'),
-                        moment().add(7, 'days').endOf('week')],
-           'This month':[moment(), moment().endOf('month')],
-           'Within two weeks':[moment(),moment().add(15, 'days')]
-        }}
-       );
-    });
-  </script>
+<div class="container">
 
-<input class="btn btn-default" type="submit" value="Apply date range" />
-</form>
+<div class="jumbotron">
+<h1>Meeting Proposals</h1>
+      <p>Times proposed to meet. Click "Get My Calendar" to find the times you both have free!</p>
+      <p>
+          {% if session.calendars is not defined  %}
+          <form id="getcals" method="GET" action="/getcals">
+              <button class="btn btn-default btn-lg" type="submit">Get My Calendars</button>
+          </form>
+      {% endif %}
+  </p>
+      <form id="intersect" method="POST" action="/intersection">
+      <button type="submit" id="btn-custom" class="btn btn-default btn-lg" value="Intersect" form="times">Intersect</button>
+      </form>
+    </div>
 
-    <!--
-    The user is offered a chance to times that *do not* appear
-    as 'busy' in any of a selected set of their calendars (e.g., times
-    when they are in other meetings.
+<!-- <div class="col-md-10 pull-left" style="border-right:1px solid #ccc;"> -->
 
-    If we already have the list of calendars, we display the menu.
-    If we don't, we provide a link that can be used to authorize
-    access to the calendars.
-    -->
+<div class="row">
+{% if session.calendars is defined  %}
+<ul class="list-inline">
+<li>
+<ul class="list-unstyled">
+{% for cal in session.calendars if cal.selected %}
+<li><input type="checkbox" name="calid" value={{ cal.id }}>{{ cal.summary }}</li>
+{% if loop.index is divisibleby 3 %}
+</ul>
+</li>
+<li><ul class="list-unstyled">
+{% endif %}
+{% endfor %}
+</ul>
+</li>
+</ul>
+{% endif %}
+</div>
 
-  </div>
 
-  </body> </html>
+<div class="row">
+<div class="col-md-6 pull-left">
+{% if other_meetings %}
+<script>
+function toggle(source) {
+  checkboxes = document.getElementsByName('time');
+  for(var i=0, n=checkboxes.length;i<n;i++) {
+    checkboxes[i].checked = source.checked;
+  }
+}
+</script>
+<ul class="list-unstyled">
+<li><input type="checkbox" onClick="toggle(this)"/> Check All</li>
+{% for time in other_meetings.appts %}
+<li><input type="checkbox" name="time" value={{ time }}> {{ time }}</li>
+{% endfor %}
+</ul>
+</ul>
+{% endif %}
+</div>
+
+<div class="col-md-6 pull-right">
+{% if meetings %}
+<ul class="list-unstyled">
+{% for time in meetings.appts %}
+<li><input type="checkbox" name="time" value={{ time }}> {{ time }}</li>
+{% endfor %}
+</ul>
+</ul>
+{% endif %}
+</div>
+</div>
+
+
+
+  </div>  <!-- container (for bootstrap) -->
+
+  </body>
+  </html>

@@ -70,16 +70,40 @@ def index():
       return flask.redirect(flask.url_for('oauth2callback'))
   if 'begin_date' not in flask.session:
       init_session_values()
+  if 'available_other' in flask.session:
+      available_o = get_meetings(flask.session['available_other'])
+      return render_template('index.html',other_meetings=available_o)
   return render_template('index.html')
 
 #key: CKN23
+@app.route("/busy/<key>")
 @app.route("/meetings/<key>")
 def meeting_data(key):
     #check if user is same
-    available_other = get_meetings(key)
-    print(str(available_other))
     flask.session['available_other'] = key
-    return flask.render_template('index.html')
+    if 'use_gcal' in flask.session and flask.session['use_gcal']:
+      credentials = valid_credentials()
+      if not credentials:
+        return flask.redirect(flask.url_for('oauth2callback'))
+    if 'begin_date' not in flask.session:
+        init_given_values(key)
+    return flask.render_template('busy.html',other_meetings=get_meetings(key))
+
+@app.route("/getmycals")
+def othercals():
+    ## We'll need authorization to list calendars
+    ## I wanted to put what follows into a function, but had
+    ## to pull it back here because the redirect has to be a
+    ## 'return'
+    app.logger.debug("Checking credentials for Google calendar access")
+    credentials = valid_credentials()
+    if not credentials:
+      app.logger.debug("Redirecting to authorization")
+      return flask.redirect(flask.url_for('oauth2callback'))
+    gcal_service = get_gcal_service(credentials)
+    app.logger.debug("Returned from get_gcal_service")
+    flask.session['calendars'] = list_calendars(gcal_service)
+    return flask.redirect(url_for('busy', key=flask.session['available_other']))
 
 
 @app.route("/getcals")
@@ -203,6 +227,8 @@ def oauth2callback():
     app.logger.debug("Got credentials")
     flask.flash('Setting option to use Google calendars')
     flask.session['use_gcal'] = True
+    if 'available_other' in flask.session:
+        return flask.redirect('busy')
     return flask.redirect('index')
 
 #####
@@ -230,6 +256,8 @@ def setrange():
     daterange_parts = daterange.split(' - ')
     flask.session['begin_date'] = interpret_date(daterange_parts[0])
     flask.session['end_date'] = interpret_date(daterange_parts[1])
+    # flask.session['begin_time'] = request.form.get('begin-time')
+    # flask.session['end_time'] = request.form.get('end-time')
     app.logger.debug("Setrange parsed {} - {}  dates as {} - {}".format(
       daterange_parts[0], daterange_parts[1],
       flask.session['begin_date'], flask.session['end_date']))
@@ -258,6 +286,24 @@ def init_session_values():
     # Default time span each day, 8 to 5
     flask.session["begin_time"] = interpret_time("9am")
     flask.session["end_time"] = interpret_time("5pm")
+
+def init_given_values(key):
+    """
+    Start with some reasonable defaults for date and time ranges.
+    Note this must be run in app context ... can't call from main.
+    """
+    # Default date span = tomorrow to 1 week from now
+    now = arrow.now('local')
+    tomorrow = now.replace(days=+1)
+    nextweek = now.replace(days=+7)
+    flask.session["begin_date"] = tomorrow.floor('day').isoformat()
+    flask.session["end_date"] = nextweek.ceil('day').isoformat()
+    flask.session["daterange"] = "{} - {}".format(
+        tomorrow.format("MM/DD/YYYY"),
+        nextweek.format("MM/DD/YYYY"))
+    flask.session["begin_time"] = interpret_time("9am")
+    flask.session["end_time"] = interpret_time("5pm")
+
 
 def interpret_time( text ):
     """
@@ -330,11 +376,12 @@ def put_meetings(meetings,key):
 
 def get_meetings(key):
     records = []
-    meetings = collection.find({"key":key})
+    meetings = collection.find({"key":key}).sort('start',1)
     other_agenda = Agenda()
     for meeting in meetings:
-        time = Appt(meeting['start'].date(),meeting['start'].time(),meeting['end'].time(),"meetme");
+        time = Appt(meeting['start'].date(),meeting['start'].time(),meeting['end'].time(),"meetme")
         other_agenda.append(time);
+
     print(str(other_agenda))
     return other_agenda
 
@@ -372,9 +419,52 @@ def list_calendars(service):
             })
     return sorted(result, key=cal_sort_key)
 
+
 @app.route("/intersection")
-def intersection(available_other):
-    pass
+def intersection():
+    to_intersect = request.form.getlist('time')
+    credentials = valid_credentials()
+    service = get_gcal_service(credentials)
+
+    # Agenda of all the events that occur within the specified date range
+    busy_times = Agenda()
+    other_times = Agenda()
+    for ot in to_intersect:
+        other_times.append(ot)
+    app.logger.debug(other_times)
+    # begin_time = to_intersec
+    # print(str(begin_time))
+    # end_time = meetings.find().sort({'end':-1}).limit(1)
+    # print(str(begin_time))
+    # For each calendar, get the events within the specified range
+    min_date = min(other_times.appts,key=lambda x:x.begin)
+    max_date = max(other_times.appts,key=lambda x: x.end)
+
+    for cal in calids:
+        app.logger.debug("Getting free times between "+min_date+" and "+max_date)
+        events = service.events().list(calendarId=cal,singleEvents=True,timeMin=min_date,timeMax=max_date).execute()
+
+        for event in events['items']:
+            busy = Appt(arrow.get(event['start']['dateTime']).date(),arrow.get(event['start']['dateTime']).time(),arrow.get(event['end']['dateTime']).time(),"busy")
+            busy_times.append(busy)
+
+
+    begin_date = arrow.get(begin_time.date())
+    end_date = arrow.get(end_time.date())
+
+    begin_time = arrow.get(flask.session['begin_time']).time()
+    end_time = arrow.get(flask.session['end_time']).time()
+
+    # Calling normalize makes sure that overlapping events are merged
+    busy_times.normalize()
+
+    # Make a new Agenda with all the free times
+    meetings = busy_times.freeblocks(begin_date, end_date, begin_time, end_time)
+    # Merge overlapping free times (if they exist) as a precaution
+    meetings.normalize()
+    # put_meetings(meetings,key=generate_key());
+
+
 
 @app.route("/blocktimes", methods=['POST','GET'])
 def blocktimes():
@@ -418,7 +508,7 @@ def blocktimes():
     meetings = busy_times.freeblocks(begin_date, end_date, begin_time, end_time)
     # Merge overlapping free times (if they exist) as a precaution
     meetings.normalize()
-    put_meetings(meetings,key=generate_key());
+    # put_meetings(meetings,key=generate_key());
 
     if 'available_other' in flask.session:
         available_o = get_meetings(flask.session['available_other'])
@@ -429,7 +519,7 @@ def blocktimes():
         app.logger.debug("other:")
         print(str(available_o))
         app.logger.debug("Returning intersect")
-        return flask.render_template('index.html',meetings=available_intersect)
+        return flask.render_template('index.html',meetings=available_intersect,oother_meetings=available_o)
 
     return flask.render_template('index.html',meetings=meetings)
 
@@ -486,9 +576,9 @@ if __name__ == "__main__":
   app.logger.setLevel(logging.DEBUG)
   # We run on localhost only if debugging,
   # otherwise accessible to world
-  if CONFIG.DEBUG:
+  # if CONFIG.DEBUG:
     # Reachable only from the same computer
-    app.run(port=CONFIG.PORT)
-  else:
+    # app.run(port=CONFIG.PORT)
+  # else:
     # Reachable from anywhere
-    app.run(port=CONFIG.PORT,host="0.0.0.0")
+  app.run(port=CONFIG.PORT,host="0.0.0.0")
