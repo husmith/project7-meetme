@@ -67,14 +67,13 @@ src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/js/boo
       <p>Times proposed to meet. Click "Get My Calendar" to find the times you both have free!</p>
       <p>
           {% if session.calendars is not defined  %}
-          <form id="getcals" method="GET" action="/getcals">
+          <form id="getcals" method="GET" action="/getmycals">
               <button class="btn btn-default btn-lg" type="submit">Get My Calendars</button>
           </form>
       {% endif %}
   </p>
-      <form id="intersect" method="POST" action="/intersection">
-      <button type="submit" id="btn-custom" class="btn btn-default btn-lg" value="Intersect" form="times">Intersect</button>
-      </form>
+
+      <button type="submit" id="btn-custom" class="btn btn-default btn-lg" value="Intersect" form="intersect">Intersect</button>
     </div>
 
 <!-- <div class="col-md-10 pull-left" style="border-right:1px solid #ccc;"> -->
@@ -101,7 +100,7 @@ src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/js/boo
 
 <div class="row">
 <div class="col-md-6 pull-left">
-{% if other_meetings %}
+
 <script>
 function toggle(source) {
   checkboxes = document.getElementsByName('time');
@@ -110,6 +109,9 @@ function toggle(source) {
   }
 }
 </script>
+
+<form id="intersect" method="POST" action="/intersection">
+{% if other_meetings %}
 <ul class="list-unstyled">
 <li><input type="checkbox" onClick="toggle(this)"/> Check All</li>
 {% for time in other_meetings.appts %}
@@ -119,6 +121,7 @@ function toggle(source) {
 </ul>
 {% endif %}
 </div>
+</form>
 
 <div class="col-md-6 pull-right">
 {% if meetings %}
